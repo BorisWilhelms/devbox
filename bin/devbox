@@ -1,0 +1,54 @@
+#! /bin/bash
+verbose=false
+action="run"
+
+args+=" -f $HOME/.local/share/devbox/devbox-compose.yml"
+
+if [ -f "$HOME/.config/devbox/devbox.yml" ]; then
+  args+=" -f $HOME/.config/devbox/devbox.yml"
+fi
+
+if [ -d ".devbox" ]; then
+  args+=" -f .devbox/devbox.yml"
+else
+  args+=" -f $HOME/.local/share/devbox/devbox-compose.default.yml"
+fi
+
+args+=" --project-directory ."
+
+if [[ -n "$1" && "$1" != "-"* ]]; then
+  action=$1
+  shift
+fi
+
+while getopts "v" opt; do
+  case "$opt" in
+  v) verbose=true ;;
+  esac
+done
+
+if [ "$verbose" = true ]; then
+  docker compose ${args[@]} config
+fi
+
+if [ "$action" == "run" ]; then
+  docker compose ${args[@]} up -d
+  docker compose ${args[@]} exec devbox /bin/bash
+elif [ "$action" == "up" ]; then
+  docker compose ${args[@]} up -d
+elif [ "$action" == "rebuild" ]; then
+  docker compose ${args[@]} build
+elif [ "$action" == "build-base" ]; then
+  docker build -t devbox:latest - < "$HOME/.local/share/devbox/Dockerfile"
+else
+  echo "Usage: $0 {run|up|rebuild|build-base} [-v]"
+  echo ""
+  echo "  run         starts and attaches to the devbox"
+  echo "  up          starts the devbox"
+  echo "  rebuild     rebuilds the devbox"
+  echo "  build-base  builds the base image"
+  echo ""
+  echo "  -v          Verbose"
+
+  exit 1
+fi
